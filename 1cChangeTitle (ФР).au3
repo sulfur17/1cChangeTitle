@@ -1,4 +1,4 @@
-#include <WinAPIProc.au3>
+п»ї#include <WinAPIProc.au3>
 #include <WinAPI.au3>
 #RequireAdmin
 
@@ -58,7 +58,7 @@ Func _WinTitleToHwnd($proc,$txt="")   ;Convert Window title to Hwnd
 EndFunc
 
 
-;Список процессов
+;РЎРїРёСЃРѕРє РїСЂРѕС†РµСЃСЃРѕРІ
 While 1
  $hToken = _WinAPI_OpenProcessToken(BitOR($TOKEN_ADJUST_PRIVILEGES, $TOKEN_QUERY))
 _WinAPI_AdjustTokenPrivileges($hToken, $SE_DEBUG_NAME, $SE_PRIVILEGE_ENABLED, $aAdjust)
@@ -67,7 +67,7 @@ _WinAPI_AdjustTokenPrivileges($hToken, $SE_DEBUG_NAME, $SE_PRIVILEGE_ENABLED, $a
         For $i = 1 To $aList[0][0]
           $List2 = StringUpper(_WinAPI_GetProcessCommandLine($aList[$i][1]))
           If StringRegExp ( $List2, "DESIGNER" ) Then
-			;If StringRegExp ( $List2, "COPY" ) or StringRegExp ( $List2, "TEST" ) or StringRegExp ( $List2, "ТЕСТ" ) or StringRegExp ( $List2, "КОПИЯ" ) Then
+			;If StringRegExp ( $List2, "COPY" ) or StringRegExp ( $List2, "TEST" ) or StringRegExp ( $List2, "РўР•РЎРў" ) or StringRegExp ( $List2, "РљРћРџРРЇ" ) Then
 			If True Then
 			   ;MsgBox(0,"",$list2)
 			   $List2 = StringReplace($List2,"DESIGNER","")
@@ -76,7 +76,7 @@ _WinAPI_AdjustTokenPrivileges($hToken, $SE_DEBUG_NAME, $SE_PRIVILEGE_ENABLED, $a
 			   $List2 = StringReplace($List2,"/APPAUTOCHECKMODE","")
 			   $ID =($aList[$i][1])
 
-			   ;$List2 = "Тестовая база " & String($List2)
+			   ;$List2 = "РўРµСЃС‚РѕРІР°СЏ Р±Р°Р·Р° " & String($List2)
 			   $List2 = "" & String($List2)
 			   WinSetTitle(_GetHwnd($ID),"",$List2)
 
@@ -86,7 +86,7 @@ _WinAPI_AdjustTokenPrivileges($hToken, $SE_DEBUG_NAME, $SE_PRIVILEGE_ENABLED, $a
         _WinAPI_AdjustTokenPrivileges($hToken, $aAdjust, 0, $aAdjust)
         _WinAPI_CloseHandle($hToken)
       Else
-        MsgBox(0, "Error", "Ошибка получения полномочий")
+        MsgBox(0, "Error", "РћС€РёР±РєР° РїРѕР»СѓС‡РµРЅРёСЏ РїРѕР»РЅРѕРјРѕС‡РёР№")
 		Exit
       EndIf
 
