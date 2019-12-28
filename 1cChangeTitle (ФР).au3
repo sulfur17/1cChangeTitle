@@ -5,6 +5,10 @@
 
 Global $aAdjust
 
+Func Debug($sLine)
+	ConsoleWrite("Debug: " & $sLine & @CRLF)
+EndFunc
+
 Func _GetHwnd($id,$txt="")   ;Retrieve Hwnd of process
     $proc = 0
     If _IsPIDOrProc($id) Then
@@ -75,16 +79,18 @@ EndFunc
 
 ; Return string with really important cmd-line parameters in plain view
 ; example "Base = TB, User = Admin"
-Func _1CImportantParametersLine($sCmdLine)
+Func Important1CParametersLine($ID)
 
 	; example: DESIGNER /IBNAME"ЦФГ ТБ (рабочая)" /APPAUTCHECKMODE
-	; example /IBNAME"PK" /N"Администратор" /USEHWLICENSES+ /TCOMP -SDC /LRU /VLRU /O NORMAL
+	; example /IBName"PK" /N"Администратор" /USEHWLICENSES+ /TCOMP -SDC /LRU /VLRU /O NORMAL
 	; you can test regex at https://regex101.com
+
+	$sCmdLine = _WinAPI_GetProcessCommandLine($ID)
 
 	Local $aParameters[2][2];
 
 	$aParameters[0][0] = "" ; "Base = "
-	$aParameters[0][1] = "\/IBNAME""([^""]*)"""
+	$aParameters[0][1] = "\/IBName""([^""]*)"""
 
 	$aParameters[1][0] = "" ; "User = "
 	$aParameters[1][1] = "\/N""([^""]*)"""
@@ -104,48 +110,42 @@ Func _1CImportantParametersLine($sCmdLine)
 	Return $sResult
 EndFunc
 
-Func ImproveMainCaption($aProcList)
+Func WriteLineInTitle($hWnd, $sLine)
+
+	$sOldTitle = WinGetTitle($hWnd, "")
+
+	If StringLeft($sOldTitle, StringLen($sLine)) <> $sLine Then ; if title doesn't start from formatted line already
+		$sNewTitle = $sLine & " - " & $sOldTitle
+		WinSetTitle($hWnd, "", $sNewTitle)
+	EndIf
+
+EndFunc
+
+Func ImproveMainCaptions($aProcList)
+
 	$iProcessNumer = $aProcList[0][0]
 	For $i = 1 To $iProcessNumer
 
-		$sCmdLine = StringUpper(_WinAPI_GetProcessCommandLine($aProcList[$i][1]))
-		$sLine = _1CImportantParametersLine($sCmdLine)
-
 		$ID = $aProcList[$i][1]
-		WinSetTitle(_GetHwnd($ID), "", "{" & $sLine & "}")
+		$hWnd = _GetHwnd($ID)
 
-		#comments-start
-			If StringRegExp($sCmdLine, "DESIGNER") Then
-				;If StringRegExp ( $List2, "COPY" ) or StringRegExp ( $List2, "TEST" ) or StringRegExp ( $List2, "ТЕСТ" ) or StringRegExp ( $List2, "КОПИЯ" ) Then
-				If True Then
-					;MsgBox(0,"",$list2)
-					$sCmdLine = StringReplace($sCmdLine,"DESIGNER","")
-					$sCmdLine = StringReplace($sCmdLine,"/IBNAME","")
-					$sCmdLine = StringReplace($sCmdLine,"/APPAUTOCHECKVERSION","")
-					$sCmdLine = StringReplace($sCmdLine,"/APPAUTOCHECKMODE","")
-					$ID = $aProcList[$i][1]
+		$sImportant1CParametersLine = Important1CParametersLine($ID)
+		;ConsoleWrite("$sCmdLine = " & $sCmdLine & @CRLF)
 
-					;$List2 = "Тестовая база " & String($List2)
-					$sCmdLine = "" & $sCmdLine
-					WinSetTitle(_GetHwnd($ID), "", $List2)
-
-				EndIf
-			EndIf
-		#comments-end
+		WriteLineInTitle($hWnd, "{" & $sImportant1CParametersLine & "}")
 	Next
 EndFunc
 
-
-;Список процессов
+; Main Entry point
 While 1
 	$hToken = _WinAPI_OpenProcessToken(BitOR($TOKEN_ADJUST_PRIVILEGES, $TOKEN_QUERY))
 	_WinAPI_AdjustTokenPrivileges($hToken, $SE_DEBUG_NAME, $SE_PRIVILEGE_ENABLED, $aAdjust)
 	If Not (@error Or @extended) Then
 		$aProcList = ProcessList("1cv8.exe")
-		ImproveMainCaption($aProcList)
+		ImproveMainCaptions($aProcList)
 
 		$aProcList = ProcessList("1cv8c.exe")
-		ImproveMainCaption($aProcList)
+		ImproveMainCaptions($aProcList)
 
 		_WinAPI_AdjustTokenPrivileges($hToken, $aAdjust, 0, $aAdjust)
 		_WinAPI_CloseHandle($hToken)
