@@ -1,5 +1,6 @@
 ﻿#include <WinAPIProc.au3>
 #include <WinAPI.au3>
+#include <StringConstants.au3>
 #RequireAdmin
 
 Global $aAdjust
@@ -51,44 +52,107 @@ Func _PIDOrProcToHwnd($proc)   ;Convert PID or process to Hwnd
     Return $proc
 EndFunc
 
-Func _WinTitleToHwnd($proc,$txt="")   ;Convert Window title to Hwnd
+Func _WinTitleToHwnd($proc, $txt = "")   ;Convert Window title to Hwnd
     $winlist = WinList($proc,$txt)
     If Not $winlist[0][0] Then Return -1
     Return $winlist[1][1]
 EndFunc
 
+; Gives you more clear command parameter's  view, like "User = Admin" from /N"Admin"
+Func _PlainExpression($sCmdLine, $sParameterPattern, $sParameterPlainName)
+
+	$aMatches = StringRegExp($sCmdLine, $sParameterPattern, $STR_REGEXPARRAYMATCH)
+
+	If (@error) Then
+		$sPlainExpression = ""
+	Else
+		$sPlainExpression = $sParameterPlainName & $aMatches[0]
+	EndIf
+
+	Return $sPlainExpression
+
+EndFunc
+
+; Return string with really important cmd-line parameters in plain view
+; example "Base = TB, User = Admin"
+Func _1CImportantParametersLine($sCmdLine)
+
+	; example: DESIGNER /IBNAME"ЦФГ ТБ (рабочая)" /APPAUTCHECKMODE
+	; example /IBNAME"PK" /N"Администратор" /USEHWLICENSES+ /TCOMP -SDC /LRU /VLRU /O NORMAL
+	; you can test regex at https://regex101.com
+
+	Local $aParameters[2][2];
+
+	$aParameters[0][0] = "" ; "Base = "
+	$aParameters[0][1] = "\/IBNAME""([^""]*)"""
+
+	$aParameters[1][0] = "" ; "User = "
+	$aParameters[1][1] = "\/N""([^""]*)"""
+
+	Local Const $iArraySize = Ubound($aParameters)
+	$sResult = ""
+	$sDelim = ""
+
+	For $i = 0 To $iArraySize - 1
+		$sPlainExpression = _PlainExpression($sCmdLine, $aParameters[$i][1], $aParameters[$i][0])
+		If $sPlainExpression <> "" Then
+			$sResult = $sResult & $sDelim & $sPlainExpression
+			$sDelim = ", ";
+		EndIf
+	Next
+
+	Return $sResult
+EndFunc
+
+Func ImproveMainCaption($aProcList)
+	$iProcessNumer = $aProcList[0][0]
+	For $i = 1 To $iProcessNumer
+
+		$sCmdLine = StringUpper(_WinAPI_GetProcessCommandLine($aProcList[$i][1]))
+		$sLine = _1CImportantParametersLine($sCmdLine)
+
+		$ID = $aProcList[$i][1]
+		WinSetTitle(_GetHwnd($ID), "", "{" & $sLine & "}")
+
+		#comments-start
+			If StringRegExp($sCmdLine, "DESIGNER") Then
+				;If StringRegExp ( $List2, "COPY" ) or StringRegExp ( $List2, "TEST" ) or StringRegExp ( $List2, "ТЕСТ" ) or StringRegExp ( $List2, "КОПИЯ" ) Then
+				If True Then
+					;MsgBox(0,"",$list2)
+					$sCmdLine = StringReplace($sCmdLine,"DESIGNER","")
+					$sCmdLine = StringReplace($sCmdLine,"/IBNAME","")
+					$sCmdLine = StringReplace($sCmdLine,"/APPAUTOCHECKVERSION","")
+					$sCmdLine = StringReplace($sCmdLine,"/APPAUTOCHECKMODE","")
+					$ID = $aProcList[$i][1]
+
+					;$List2 = "Тестовая база " & String($List2)
+					$sCmdLine = "" & $sCmdLine
+					WinSetTitle(_GetHwnd($ID), "", $List2)
+
+				EndIf
+			EndIf
+		#comments-end
+	Next
+EndFunc
+
 
 ;Список процессов
 While 1
- $hToken = _WinAPI_OpenProcessToken(BitOR($TOKEN_ADJUST_PRIVILEGES, $TOKEN_QUERY))
-_WinAPI_AdjustTokenPrivileges($hToken, $SE_DEBUG_NAME, $SE_PRIVILEGE_ENABLED, $aAdjust)
-      If Not (@error Or @extended) Then
-        $aList = ProcessList("1cv8.exe")
-        For $i = 1 To $aList[0][0]
-          $List2 = StringUpper(_WinAPI_GetProcessCommandLine($aList[$i][1]))
-          If StringRegExp ( $List2, "DESIGNER" ) Then
-			;If StringRegExp ( $List2, "COPY" ) or StringRegExp ( $List2, "TEST" ) or StringRegExp ( $List2, "ТЕСТ" ) or StringRegExp ( $List2, "КОПИЯ" ) Then
-			If True Then
-			   ;MsgBox(0,"",$list2)
-			   $List2 = StringReplace($List2,"DESIGNER","")
-			   $List2 = StringReplace($List2,"/IBNAME","")
-			   $List2 = StringReplace($List2,"/APPAUTOCHECKVERSION","")
-			   $List2 = StringReplace($List2,"/APPAUTOCHECKMODE","")
-			   $ID =($aList[$i][1])
+	$hToken = _WinAPI_OpenProcessToken(BitOR($TOKEN_ADJUST_PRIVILEGES, $TOKEN_QUERY))
+	_WinAPI_AdjustTokenPrivileges($hToken, $SE_DEBUG_NAME, $SE_PRIVILEGE_ENABLED, $aAdjust)
+	If Not (@error Or @extended) Then
+		$aProcList = ProcessList("1cv8.exe")
+		ImproveMainCaption($aProcList)
 
-			   ;$List2 = "Тестовая база " & String($List2)
-			   $List2 = "" & String($List2)
-			   WinSetTitle(_GetHwnd($ID),"",$List2)
+		$aProcList = ProcessList("1cv8c.exe")
+		ImproveMainCaption($aProcList)
 
-			EndIf
-		 EndIf
-        Next
-        _WinAPI_AdjustTokenPrivileges($hToken, $aAdjust, 0, $aAdjust)
-        _WinAPI_CloseHandle($hToken)
-      Else
-        MsgBox(0, "Error", "Ошибка получения полномочий")
+		_WinAPI_AdjustTokenPrivileges($hToken, $aAdjust, 0, $aAdjust)
+		_WinAPI_CloseHandle($hToken)
+	Else
+		MsgBox(0, "Error", "Ошибка получения полномочий")
 		Exit
-      EndIf
+	EndIf
 
-Sleep(2500)
+	Sleep(2500)
 WEnd
