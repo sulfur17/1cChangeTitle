@@ -1,7 +1,9 @@
-﻿#include <WinAPIProc.au3>
+﻿#RequireAdmin
+#AutoIt3Wrapper_UseX64=Y
+
+#include <WinAPIProc.au3>
 #include <WinAPI.au3>
 #include <StringConstants.au3>
-#RequireAdmin
 
 Global $aAdjust
 
@@ -86,6 +88,7 @@ Func Important1CParametersLine($ID)
 	; you can test regex at https://regex101.com
 
 	$sCmdLine = _WinAPI_GetProcessCommandLine($ID)
+	;ConsoleWrite("$sCmdLine = " & $sCmdLine & @CRLF)
 
 	Local $aParameters[2][2];
 
@@ -130,7 +133,6 @@ Func ImproveMainCaptions($aProcList)
 		$hWnd = _GetHwnd($ID)
 
 		$sImportant1CParametersLine = Important1CParametersLine($ID)
-		;ConsoleWrite("$sCmdLine = " & $sCmdLine & @CRLF)
 
 		WriteLineInTitle($hWnd, "{" & $sImportant1CParametersLine & "}")
 	Next
